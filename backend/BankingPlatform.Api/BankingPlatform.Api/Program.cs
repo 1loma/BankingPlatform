@@ -1,6 +1,8 @@
 using BankingPlatform.Api.Data;
+using BankingPlatform.Api.Models.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-
+using BankingPlatform.Api.Services;
 
 namespace BankingPlatform.Api
 {
@@ -25,8 +27,23 @@ namespace BankingPlatform.Api
             builder.Services.AddDbContext<BankingDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("BankingDatabase")));
 
-            var app = builder.Build();
+            builder.Services.AddDataProtection();
 
+            builder.Services.AddIdentityCore<ApplicationUser>(options =>
+                {
+                    options.SignIn.RequireConfirmedEmail = true;
+                    options.User.RequireUniqueEmail = true;
+                }).AddRoles<IdentityRole>()
+                  .AddEntityFrameworkStores<BankingDbContext>()
+                  .AddSignInManager()
+                  .AddDefaultTokenProviders();
+
+            // One EmailService instance per request scope
+            builder.Services.AddScoped<EmailService>();
+
+
+            var app = builder.Build();
+            
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
