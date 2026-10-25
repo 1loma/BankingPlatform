@@ -1,0 +1,20 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: banking-sqlserver
+
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Developer"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+
+    ports:
+      - "127.0.0.1:14333:1433"
+
+    volumes:
+      - banking_sql_data:/var/opt/mssql
+
+    restart: unless-stopped
+
+volumes:
+  banking_sql_data:
