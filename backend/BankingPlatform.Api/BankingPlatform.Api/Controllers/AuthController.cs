@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using System.Text;
+using Microsoft.AspNetCore.Authorization;
+
 
 namespace BankingPlatform.Api.Controllers;
 
@@ -18,17 +20,22 @@ public class AuthController : ControllerBase
     private readonly BankingDbContext _context;
     private readonly EmailService _emailService;
     private readonly ILogger<AuthController> _logger;
-
+    private readonly JwtService _jwtService;
+    private readonly SignInManager<ApplicationUser> _signInManager;
     public AuthController(
         UserManager<ApplicationUser> userManager,
         BankingDbContext context,
         EmailService emailService,
-        ILogger<AuthController> logger)
+        ILogger<AuthController> logger, 
+        SignInManager<ApplicationUser> signInManager,
+        JwtService jwtService)
     {
         _userManager = userManager;
         _context = context;
         _emailService = emailService;
         _logger = logger;
+        _signInManager = signInManager;
+        _jwtService = jwtService;
     }
 
     // POST /api/auth/register
@@ -159,5 +166,74 @@ public class AuthController : ControllerBase
         }
 
         return Ok("Email confirmed successfully.");
+    }
+
+
+
+
+    // POST /api/auth/login
+    [HttpPost("login")]
+    public async Task<IActionResult> Login(LoginRequest request)
+    {
+        // Search for the registered user by email
+        var user = await _userManager.FindByEmailAsync(
+            request.Email.Trim());
+
+        if (user == null)
+            return Unauthorized("Invalid email or password.");
+
+        // Block disabled banking users
+        if (!user.IsActive)
+            return Unauthorized("Account is unavailable.");
+
+        // Identity checks the password and handles lockout attempts
+        var result = await _signInManager.CheckPasswordSignInAsync(
+            user, request.Password, lockoutOnFailure: true);
+
+        if (result.IsLockedOut)
+            return Unauthorized("Account temporarily locked.");
+
+        if (!result.Succeeded)
+            return Unauthorized("Invalid credentials or unconfirmed email.");
+
+        // Only authenticated users receive a JWT
+        var token = _jwtService.GenerateToken(user);
+
+        return Ok(new
+        {
+            AccessToken = token,
+            TokenType = "Bearer",
+            ExpiresInSeconds = 900
+        });
+    }
+
+    // GET /api/auth/me
+    [Authorize]
+    [HttpGet("me")]
+    public async Task<IActionResult> Me()
+    {
+        // Read the user ID from the validated JWT
+        var userId = User.FindFirst(
+            System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
+
+        if (userId == null)
+            return Unauthorized();
+
+        var user = await _userManager.FindByIdAsync(userId);
+
+        if (user == null || !user.IsActive ||
+            !await _userManager.IsEmailConfirmedAsync(user))
+        {
+            return Unauthorized();
+        }
+
+        // Return only safe profile information
+        return Ok(new
+        {
+            user.Id,
+            user.Email,
+            user.EmailConfirmed,
+            user.CreatedAt
+        });
     }
 }
