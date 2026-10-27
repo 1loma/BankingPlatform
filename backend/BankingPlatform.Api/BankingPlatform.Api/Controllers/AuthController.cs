@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
-
+using System.Net;
 
 namespace BankingPlatform.Api.Controllers;
 
@@ -236,4 +236,144 @@ public class AuthController : ControllerBase
             user.CreatedAt
         });
     }
+
+
+
+    // POST /api/Auth/forgot-password
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword(
+        ForgotPasswordRequest request)
+    {
+        const string message =
+            "If an eligible account exists, reset instructions will be sent.";
+
+        var user = await _userManager.FindByEmailAsync(request.Email.Trim());
+
+        if (user == null || !user.IsActive ||
+            !await _userManager.IsEmailConfirmedAsync(user))
+            return Ok(new { Message = message });
+
+        // Identity generates a protected, time-limited reset token
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+
+        var encodedToken = WebEncoders.Base64UrlEncode(
+            Encoding.UTF8.GetBytes(token));
+
+        // Generate a clickable link to our password-reset page
+        var link = Url.ActionLink(
+            nameof(ResetPasswordPage),
+            "Auth",
+            new { email = user.Email, token = encodedToken },
+            Request.Scheme);
+
+        if (link == null)
+            return StatusCode(500, "Could not create reset link.");
+
+        try
+        {
+            await _emailService.SendAsync(
+                user.Email!,
+                "Reset your BankingPlatform password",
+                $"Click this link to reset your password:\n{link}\n\n" +
+                "If you did not request this, ignore this email.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send password reset email.");
+        }
+
+        return Ok(new { Message = message });
+    }
+
+
+    // GET /api/Auth/reset-password-page?email=...&token=...
+    [HttpGet("reset-password-page")]
+    public IActionResult ResetPasswordPage(string email, string token)
+    {
+        if (string.IsNullOrWhiteSpace(email) ||
+            string.IsNullOrWhiteSpace(token))
+            return BadRequest("Invalid reset link.");
+
+        // Encode values before placing them inside HTML
+        var safeEmail = WebUtility.HtmlEncode(email);
+        var safeToken = WebUtility.HtmlEncode(token);
+
+        // A temporary form until we build the React frontend
+        var html = $$"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>BankingPlatform - Reset Password</title>
+        <meta name="referrer" content="no-referrer">
+    </head>
+    <body style="font-family:Arial;max-width:400px;margin:80px auto;">
+        <h2>Reset your password</h2>
+
+        <form method="post" action="/api/Auth/reset-password">
+            <input type="hidden" name="email" value="{{safeEmail}}">
+            <input type="hidden" name="token" value="{{safeToken}}">
+
+            <label>New Password</label>
+            <input type="password" name="NewPassword"
+                   required minlength="6" style="display:block;margin:10px 0;">
+
+            <label>Confirm Password</label>
+            <input type="password" name="ConfirmPassword"
+                   required style="display:block;margin:10px 0;">
+
+            <button type="submit">Reset Password</button>
+        </form>
+    </body>
+    </html>
+    """;
+
+        Response.Headers.CacheControl = "no-store";
+        Response.Headers["Referrer-Policy"] = "no-referrer";
+
+        return Content(html, "text/html");
+    }
+
+
+    // POST /api/Auth/reset-password
+    [HttpPost("reset-password")]
+    [Consumes("application/x-www-form-urlencoded")]
+    public async Task<IActionResult> ResetPassword(
+        [FromForm] ResetPasswordRequest request,
+        [FromForm] string email,
+        [FromForm] string token)
+    {
+        if (!ModelState.IsValid)
+            return ValidationProblem(ModelState);
+
+        var user = await _userManager.FindByEmailAsync(email.Trim());
+
+        if (user == null || !user.IsActive)
+            return BadRequest("Invalid or expired reset link.");
+
+        string decodedToken;
+
+        try
+        {
+            decodedToken = Encoding.UTF8.GetString(
+                WebEncoders.Base64UrlDecode(token));
+        }
+        catch (FormatException)
+        {
+            return BadRequest("Invalid reset token.");
+        }
+
+        // Verify emailed token and securely update password
+        var result = await _userManager.ResetPasswordAsync(
+            user, decodedToken, request.NewPassword);
+
+        if (!result.Succeeded)
+            return BadRequest("Invalid reset token or password.");
+
+        Response.Headers.CacheControl = "no-store";
+
+        return Content(
+            "<h2>Password reset successfully!</h2><p>You can now log in.</p>",
+            "text/html");
+    }
+
 }

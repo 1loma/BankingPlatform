@@ -18,12 +18,12 @@ namespace BankingPlatform.Api
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // 1. Register controllers
+            // Register controllers
             builder.Services.AddControllers();
             builder.Services.AddOpenApi();
             builder.Services.AddEndpointsApiExplorer();
 
-            // 2. Configure Swagger with JWT authorization
+            // Configure Swagger with JWT authorization
             builder.Services.AddSwaggerGen(options =>
             {
                 options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -52,14 +52,14 @@ namespace BankingPlatform.Api
                 });
             });
 
-            // 3. Connect EF Core to SQL Server
+            // Connect EF Core to SQL Server
             builder.Services.AddDbContext<BankingDbContext>(options =>
                 options.UseSqlServer(
                     builder.Configuration.GetConnectionString("BankingDatabase")));
 
             builder.Services.AddDataProtection();
 
-            // 4. Configure ASP.NET Core Identity
+            // Configure ASP.NET Core Identity
             builder.Services
                 .AddIdentityCore<ApplicationUser>(options =>
                 {
@@ -80,12 +80,16 @@ namespace BankingPlatform.Api
                 .AddEntityFrameworkStores<BankingDbContext>()
                 .AddSignInManager()
                 .AddDefaultTokenProviders();
+            
+            // Password reset and email confirmation tokens expire in 1 hour
+            builder.Services.Configure<DataProtectionTokenProviderOptions>(
+                options => { options.TokenLifespan = TimeSpan.FromHours(1); });
 
-            // 5. Register application services
+            // Register application services
             builder.Services.AddScoped<EmailService>();
             builder.Services.AddScoped<JwtService>();
 
-            // 6. Read JWT secret from User Secrets
+            // Read JWT secret from User Secrets
             var jwtKey = builder.Configuration["Jwt:Key"]
                 ?? throw new InvalidOperationException("JWT key is missing.");
 
@@ -95,7 +99,7 @@ namespace BankingPlatform.Api
                     "JWT key must be at least 32 bytes.");
             }
 
-            // 7. Configure JWT authentication
+            // Configure JWT authentication
             builder.Services
                 .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
@@ -124,8 +128,11 @@ namespace BankingPlatform.Api
                     };
                 });
 
-            // 8. Enable authorization
+            // Enable authorization
             builder.Services.AddAuthorization();
+
+
+
 
             var app = builder.Build();
 
