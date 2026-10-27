@@ -300,32 +300,32 @@ public class AuthController : ControllerBase
 
         // A temporary form until we build the React frontend
         var html = $$"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>BankingPlatform - Reset Password</title>
-        <meta name="referrer" content="no-referrer">
-    </head>
-    <body style="font-family:Arial;max-width:400px;margin:80px auto;">
-        <h2>Reset your password</h2>
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>BankingPlatform - Reset Password</title>
+                <meta name="referrer" content="no-referrer">
+            </head>
+            <body style="font-family:Arial;max-width:400px;margin:80px auto;">
+                <h2>Reset your password</h2>
 
-        <form method="post" action="/api/Auth/reset-password">
-            <input type="hidden" name="email" value="{{safeEmail}}">
-            <input type="hidden" name="token" value="{{safeToken}}">
+                <form method="post" action="/api/Auth/reset-password">
+                    <input type="hidden" name="email" value="{{safeEmail}}">
+                    <input type="hidden" name="token" value="{{safeToken}}">
 
-            <label>New Password</label>
-            <input type="password" name="NewPassword"
-                   required minlength="6" style="display:block;margin:10px 0;">
+                    <label>New Password</label>
+                    <input type="password" name="NewPassword"
+                           required minlength="6" style="display:block;margin:10px 0;">
 
-            <label>Confirm Password</label>
-            <input type="password" name="ConfirmPassword"
-                   required style="display:block;margin:10px 0;">
+                    <label>Confirm Password</label>
+                    <input type="password" name="ConfirmPassword"
+                           required style="display:block;margin:10px 0;">
 
-            <button type="submit">Reset Password</button>
-        </form>
-    </body>
-    </html>
-    """;
+                    <button type="submit">Reset Password</button>
+                </form>
+            </body>
+            </html>
+            """;
 
         Response.Headers.CacheControl = "no-store";
         Response.Headers["Referrer-Policy"] = "no-referrer";

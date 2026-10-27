@@ -20,4 +20,7 @@ public class Customer
 
     // Navigation: Customer -> User
     public ApplicationUser User { get; set; } = null!;
+
+    // A customer can have access to multiple bank accounts
+    public ICollection<AccCus> AccountCustomers { get; set; } = new List<AccCus>();
 }

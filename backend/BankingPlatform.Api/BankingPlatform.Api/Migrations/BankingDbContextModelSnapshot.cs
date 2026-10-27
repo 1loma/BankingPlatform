@@ -22,6 +22,77 @@ namespace BankingPlatform.Api.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("BankingPlatform.Api.Models.AccCus", b =>
+                {
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("AddedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Permission")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("AccountId", "CustomerId");
+
+                    b.HasIndex("CustomerId");
+
+                    b.ToTable("ACC_CUS", (string)null);
+                });
+
+            modelBuilder.Entity("BankingPlatform.Api.Models.Account", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AccountNumber")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("AccountType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTimeOffset?>("ClosedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasColumnType("char(3)");
+
+                    b.Property<DateTimeOffset>("OpenedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountNumber")
+                        .IsUnique();
+
+                    b.ToTable("Accounts", (string)null);
+                });
+
             modelBuilder.Entity("BankingPlatform.Api.Models.Customer", b =>
                 {
                     b.Property<int>("Id")
@@ -266,6 +337,25 @@ namespace BankingPlatform.Api.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("BankingPlatform.Api.Models.AccCus", b =>
+                {
+                    b.HasOne("BankingPlatform.Api.Models.Account", "Account")
+                        .WithMany("AccountCustomers")
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BankingPlatform.Api.Models.Customer", "Customer")
+                        .WithMany("AccountCustomers")
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Account");
+
+                    b.Navigation("Customer");
+                });
+
             modelBuilder.Entity("BankingPlatform.Api.Models.Customer", b =>
                 {
                     b.HasOne("BankingPlatform.Api.Models.Identity.ApplicationUser", "User")
@@ -326,6 +416,16 @@ namespace BankingPlatform.Api.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("BankingPlatform.Api.Models.Account", b =>
+                {
+                    b.Navigation("AccountCustomers");
+                });
+
+            modelBuilder.Entity("BankingPlatform.Api.Models.Customer", b =>
+                {
+                    b.Navigation("AccountCustomers");
                 });
 
             modelBuilder.Entity("BankingPlatform.Api.Models.Identity.ApplicationUser", b =>

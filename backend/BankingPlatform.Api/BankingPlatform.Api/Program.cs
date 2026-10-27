@@ -1,7 +1,7 @@
 using BankingPlatform.Api.Data;
 using BankingPlatform.Api.Models.Identity;
 using BankingPlatform.Api.Services;
-
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -19,7 +19,13 @@ namespace BankingPlatform.Api
             var builder = WebApplication.CreateBuilder(args);
 
             // Register controllers
-            builder.Services.AddControllers();
+            builder.Services.AddControllers()
+                .AddJsonOptions(options =>
+                {
+                    // Represent enum values as "Checking", not 0
+                    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+            });
+
             builder.Services.AddOpenApi();
             builder.Services.AddEndpointsApiExplorer();
 
@@ -133,10 +139,9 @@ namespace BankingPlatform.Api
 
 
 
-
             var app = builder.Build();
 
-            // 9. Enable Swagger in development
+            // Enable Swagger in development
             if (app.Environment.IsDevelopment())
             {
                 app.MapOpenApi();
@@ -146,7 +151,7 @@ namespace BankingPlatform.Api
 
             app.UseHttpsRedirection();
 
-            // 10. Validate user identity before checking permissions
+            // Validate user identity before checking permissions
             app.UseAuthentication();
             app.UseAuthorization();
 
